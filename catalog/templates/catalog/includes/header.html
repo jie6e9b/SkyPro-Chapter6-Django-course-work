@@ -1,0 +1,39 @@
+
+<header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom shadow-sm">
+    <!-- Логотип -->
+    <h5 class="my-0 me-3 fw-normal">
+        <a href="{% url 'index' %}" class="text-decoration-none text-dark">
+            <i class="bi bi-shop me-2 text-primary"></i>
+            Skystore
+        </a>
+    </h5>
+
+    <!-- Навигация -->
+    <nav class="d-flex align-items-center ms-auto">
+        <!-- Основные ссылки -->
+        <div class="me-3">
+            <a class="btn btn-outline-primary me-2 {% if request.resolver_match.url_name == 'index' %}active{% endif %}"
+               href="{% url 'index' %}">
+                <i class="bi bi-grid me-1"></i>
+                <span class="d-none d-sm-inline">Каталог</span>
+            </a>
+            <a class="btn btn-outline-primary {% if request.resolver_match.url_name == 'contacts' %}active{% endif %}"
+               href="{% url 'contacts' %}">
+                <i class="bi bi-envelope me-1"></i>
+                <span class="d-none d-sm-inline">Контакты</span>
+            </a>
+        </div>
+
+        <!-- Разделитель -->
+        <div class="vr d-none d-md-block me-3" style="height: 30px;"></div>
+
+        <!-- Кнопка добавления товара -->
+        <a class="btn btn-success {% if request.resolver_match.url_name == 'add_product' %}active{% endif %}"
+           href="{% url 'add_product' %}"
+           title="Добавить новый товар">
+            <i class="bi bi-plus-circle me-1"></i>
+            <span class="d-none d-lg-inline">Добавить товар</span>
+            <span class="d-lg-none">Добавить</span>
+        </a>
+    </nav>
+</header>
