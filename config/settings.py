@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     # Локальные приложения
     'catalog',
+    'blog',
 ]
 
 MIDDLEWARE = [

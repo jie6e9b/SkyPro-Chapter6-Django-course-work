@@ -1,0 +1,121 @@
+{% extends 'catalog/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'blog:post_list' %}">Блог</a></li>
+                {% if object %}
+                    <li class="breadcrumb-item"><a href="{% url 'blog:post_detail' object.id %}">{{ object.title }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Редактирование</li>
+                {% else %}
+                    <li class="breadcrumb-item active" aria-current="page">Новая запись</li>
+                {% endif %}
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h2 class="card-title h4 mb-0">
+            {% if object %}
+                Редактирование записи
+            {% else %}
+                Создание новой записи
+            {% endif %}
+        </h2>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="id_title" class="form-label">{{ form.title.label }}</label>
+                <input type="text" name="title" id="id_title" class="form-control" {% if form.title.value %}value="{{ form.title.value }}"{% endif %} required>
+                {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.title.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.title.help_text %}
+                    <div class="form-text">{{ form.title.help_text }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_content" class="form-label">{{ form.content.label }}</label>
+                <textarea name="content" id="id_content" class="form-control" rows="10">{% if form.content.value %}{{ form.content.value }}{% endif %}</textarea>
+                {% if form.content.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.content.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.content.help_text %}
+                    <div class="form-text">{{ form.content.help_text }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_preview" class="form-label">{{ form.preview.label }}</label>
+                {% if object and object.preview %}
+                    <div class="mb-2">
+                        <img src="{{ object.preview.url }}" alt="{{ object.title }}" class="img-thumbnail" style="max-height: 200px;">
+                    </div>
+                {% endif %}
+                <input type="file" name="preview" id="id_preview" class="form-control">
+                {% if form.preview.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.preview.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.preview.help_text %}
+                    <div class="form-text">{{ form.preview.help_text }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" name="is_published" id="id_is_published" class="form-check-input" {% if form.is_published.value %}checked{% endif %}>
+                <label for="id_is_published" class="form-check-label">{{ form.is_published.label }}</label>
+                {% if form.is_published.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.is_published.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.is_published.help_text %}
+                    <div class="form-text">{{ form.is_published.help_text }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% if object %}{% url 'blog:post_detail' object.id %}{% else %}{% url 'blog:post_list' %}{% endif %}" class="btn btn-outline-secondary me-md-2">
+                    <i class="bi bi-x-circle me-2"></i>Отмена
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-2"></i>Сохранить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

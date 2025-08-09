@@ -2,68 +2,181 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.urls import reverse_lazy
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+
 from .models import Product, ContactInfo, Category
 import re
 
 
-def index(request: HttpRequest) -> HttpResponse:
-    """ Контроллер для отображения домашней страницы каталога с пагинацией"""
-
-    # Получаем все продукты с сортировкой по дате создания (новые сначала)
-    products_list = Product.objects.select_related('category').order_by('-created_at')
-
-    # Настройки пагинации
-    products_per_page = 6  # Количество товаров на странице
-    paginator = Paginator(products_list, products_per_page)
-
-    # Получаем номер страницы из GET-параметра
-    page_number = request.GET.get('page', 1)
-
-    try:
-        products = paginator.page(page_number)
-    except PageNotAnInteger:
-        # Если номер страницы не является целым числом, показываем первую страницу
-        products = paginator.page(1)
-    except EmptyPage:
-        # Если номер страницы больше общего количества страниц, показываем последнюю
-        products = paginator.page(paginator.num_pages)
-
-    # Выводим информацию о продуктах в консоль для отладки
-    print("=" * 50)
-    print(f"📦 КАТАЛОГ ТОВАРОВ (Страница {products.number} из {paginator.num_pages}):")
-    print("=" * 50)
-    print(f"Всего товаров: {paginator.count}")
-    print(f"Товаров на странице: {len(products.object_list)}")
-    print(f"Текущая страница: {products.number}")
-    print(f"Есть следующая страница: {products.has_next()}")
-    print(f"Есть предыдущая страница: {products.has_previous()}")
-
-    for i, product in enumerate(products.object_list, 1):
-        print(f"{i}. {product.name}")
-        print(f"   Категория: {product.category.name}")
-        print(f"   Цена: {product.price} руб.")
-        print(f"   Создан: {product.created_at.strftime('%d.%m.%Y %H:%M')}")
-        print("-" * 30)
-
-    if not products.object_list:
-        print("❌ Продукты в базе данных не найдены")
-
-    print("=" * 50)
-
-    context = {
-        'title': 'Главная страница - Skystore',
-        'description': 'Добро пожаловать в наш каталог товаров!',
-        'products': products,  # Изменили с latest_products на products
-        'paginator': paginator,  # Добавляем объект пагинатора
-    }
-    return render(request, 'catalog/home.html', context)
+class IndexView(ListView):
+    """Class-based view для отображения домашней страницы каталога с пагинацией"""
+    
+    model = Product
+    template_name = 'catalog/home.html'
+    context_object_name = 'products'
+    paginate_by = 6
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        return Product.objects.select_related('category').order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Главная страница - Skystore',
+            'description': 'Добро пожаловать в наш каталог товаров!',
+        })
+        return context
 
 
-def contacts(request: HttpRequest) -> HttpResponse:
-    """ Контроллер для отображения страницы контактов с формой обратной связи"""
+class ProductDetailView(DetailView):
+    """Class-based view для отображения детальной информации о товаре"""
+    
+    model = Product
+    template_name = 'catalog/product_detail.html'
+    context_object_name = 'product'
+    pk_url_kwarg = 'product_id'
 
-    if request.method == 'POST':
-        # Обработка данных формы обратной связи
+    def get_queryset(self):
+        return Product.objects.select_related('category')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        product = context['product']
+
+        context['title'] = f'{product.name} - Skystore'
+
+        # Получаем связанные товары из той же категории (исключая текущий)
+        related_products = Product.objects.filter(
+            category=product.category
+        ).exclude(
+            id=product.pk
+        ).order_by('-created_at')[:4]
+
+        context['related_products'] = related_products
+        return context
+
+
+class AddProductView(CreateView):
+    """Class-based view для добавления нового товара"""
+    
+    model = Product
+    template_name = 'catalog/add_product.html'
+    fields = ['name', 'description', 'price', 'category', 'image']
+    success_url = reverse_lazy('index')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Добавить товар - Skystore'
+        context['button_text'] = 'Добавить товар'
+        context['cancel_url'] = reverse_lazy('index')
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Товар успешно добавлен!')
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        messages.error(self.request, 'Пожалуйста, исправьте ошибки в форме.')
+        return super().form_invalid(form)
+
+
+class EditProductView(UpdateView):
+    """Class-based view для редактирования товара"""
+    
+    model = Product
+    template_name = 'catalog/add_product.html'  # Используем тот же шаблон
+    fields = ['name', 'description', 'price', 'category', 'image']
+    pk_url_kwarg = 'product_id'
+    
+    def get_success_url(self):
+        return reverse_lazy('product_detail', kwargs={'product_id': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Редактировать {self.object.name} - Skystore'
+        context['button_text'] = 'Сохранить изменения'
+        context['cancel_url'] = reverse_lazy('product_detail', kwargs={'product_id': self.object.pk})
+        context['is_edit'] = True
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Товар успешно обновлен!')
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        messages.error(self.request, 'Пожалуйста, исправьте ошибки в форме.')
+        return super().form_invalid(form)
+
+
+class DeleteProductView(DeleteView):
+    """Class-based view для удаления товара"""
+    
+    model = Product
+    template_name = 'catalog/delete_product.html'
+    pk_url_kwarg = 'product_id'
+    success_url = reverse_lazy('index')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Удалить {self.object.name} - Skystore'
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, 'Товар успешно удален!')
+        return super().delete(request, *args, **kwargs)
+
+
+class ContactsView(TemplateView):
+    """Class-based view для отображения страницы контактов с формой обратной связи"""
+
+    template_name = 'catalog/contacts.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Получаем активную контактную информацию из базы данных
+        try:
+            contact_info = ContactInfo.objects.filter(is_active=True).first()
+            if contact_info:
+                context.update({
+                    'title': 'Контакты - Skystore',
+                    'company_name': contact_info.company_name,
+                    'address': contact_info.address,
+                    'phone': contact_info.phone,
+                    'email': contact_info.email,
+                    'working_hours': contact_info.working_hours,
+                    'description': contact_info.description,
+                })
+            else:
+                # Fallback данные, если в БД ничего нет
+                context.update({
+                    'title': 'Контакты - Skystore',
+                    'company_name': 'Skystore',
+                    'address': 'г. Москва, ул. Примерная, д. 123, офис 456',
+                    'phone': '+7 (495) 123-45-67',
+                    'email': 'info@skystore.ru',
+                    'working_hours': 'Пн-Пт: 9:00-18:00, Сб-Вс: 10:00-16:00',
+                    'description': 'Свяжитесь с нами для получения дополнительной информации.',
+                })
+        except Exception as e:
+            print(f"Ошибка при получении контактной информации: {e}")
+            # Используем стандартные данные в случае ошибки
+            context.update({
+                'title': 'Контакты - Skystore',
+                'company_name': 'Skystore',
+                'address': 'г. Москва, ул. Примерная, д. 123, офис 456',
+                'phone': '+7 (495) 123-45-67',
+                'email': 'info@skystore.ru',
+                'working_hours': 'Пн-Пт: 9:00-18:00, Сб-Вс: 10:00-16:00',
+                'description': 'Свяжитесь с нами для получения дополнительной информации.',
+            })
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Обработка POST запроса для формы обратной связи"""
         name = request.POST.get('name', '').strip()
         phone = request.POST.get('phone', '').strip()
         message = request.POST.get('message', '').strip()
@@ -75,125 +188,11 @@ def contacts(request: HttpRequest) -> HttpResponse:
             for error in errors:
                 messages.error(request, error)
         else:
-            # Здесь можно добавить логику сохранения в БД или отправки email доработаем позднее
-
             messages.success(
                 request,
                 f'Спасибо, {name}! Ваше сообщение успешно отправлено. '
                 f'Мы свяжемся с вами в ближайшее время.'
             )
-
-            # Перенаправляем на ту же страницу, чтобы избежать повторной отправки при обновлении
             return redirect('contacts')
 
-    # Получаем активную контактную информацию из базы данных
-    try:
-        contact_info = ContactInfo.objects.filter(is_active=True).first()
-        if contact_info:
-            context = {
-                'title': 'Контакты - Skystore',
-                'company_name': contact_info.company_name,
-                'address': contact_info.address,
-                'phone': contact_info.phone,
-                'email': contact_info.email,
-                'working_hours': contact_info.working_hours,
-                'description': contact_info.description,
-            }
-        else:
-            # Fallback данные, если в БД ничего нет
-            context = {
-                'title': 'Контакты - Skystore',
-                'company_name': 'Skystore',
-                'address': 'г. Москва, ул. Примерная, д. 123, офис 456',
-                'phone': '+7 (495) 123-45-67',
-                'email': 'info@skystore.ru',
-                'working_hours': 'Пн-Пт: 9:00-18:00, Сб-Вс: 10:00-16:00',
-                'description': 'Свяжитесь с нами для получения дополнительной информации.',
-            }
-    except Exception as e:
-        print(f"Ошибка при получении контактной информации: {e}")
-        # Используем стандартные данные в случае ошибки
-        context = {
-            'title': 'Контакты - Skystore',
-            'company_name': 'Skystore',
-            'address': 'г. Москва, ул. Примерная, д. 123, офис 456',
-            'phone': '+7 (495) 123-45-67',
-            'email': 'info@skystore.ru',
-            'working_hours': 'Пн-Пт: 9:00-18:00, Сб-Вс: 10:00-16:00',
-            'description': 'Свяжитесь с нами для получения дополнительной информации.',
-        }
-
-    return render(request, 'catalog/contacts.html', context)
-
-
-def product_detail(request: HttpRequest, product_id: int) -> HttpResponse:
-    """Контроллер для отображения детальной информации о товаре
-    Args: request (HttpRequest): HTTP запрос
-          product_id (int): ID товара для отображения
-    Returns: HttpResponse: Страница с детальной информацией о товаре или 404 """
-
-    # Безопасное получение товара с связанной категорией
-    # get_object_or_404 автоматически вернет 404, если товар не найден
-    product = get_object_or_404(
-        Product.objects.select_related('category'),
-        id=product_id
-    )
-
-    # Выводим информацию о товаре в консоль для отладки
-    print("=" * 50)
-    print("📦 ИНФОРМАЦИЯ О ТОВАРЕ:")
-    print("=" * 50)
-    print(f"ID: {product.pk}")
-    print(f"Название: {product.name}")
-    print(f"Категория: {product.category.name}")
-    print(f"Цена: {product.price} руб.")
-    print(f"Создан: {product.created_at.strftime('%d.%m.%Y %H:%M')}")
-    print(f"Обновлен: {product.updated_at.strftime('%d.%m.%Y %H:%M')}")
-    print(f"Описание: {product.description}")
-    if product.image:
-        print(f"Изображение: {product.image.url}")
-    print("=" * 50)
-
-    # Получаем связанные товары из той же категории (исключая текущий)
-    related_products = Product.objects.filter(
-        category=product.category
-    ).exclude(
-        id=product.pk
-    ).order_by('-created_at')[:4]  # Берем 4 связанных товара
-
-    context = {
-        'title': f'{product.name} - Skystore',
-        'product': product,
-        'related_products': related_products,
-    }
-
-    return render(request, 'catalog/product_detail.html', context)
-
-
-def add_product(request):
-    """Контроллер для добавления нового товара"""
-    if request.method == 'POST':
-        # Получаем данные из формы
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        price = request.POST.get('price')
-        category_id = request.POST.get('category')
-        image = request.FILES.get('image')
-
-        # Простая валидация
-        if name and description and price:
-            # Создаем продукт
-            product = Product.objects.create(
-                name=name,
-                description=description,
-                price=price,
-                category_id=category_id,
-                image=image
-            )
-            messages.success(request, 'Товар успешно добавлен!')
-            return redirect('index')
-        else:
-            messages.error(request, 'Заполните все обязательные поля!')
-
-    categories = Category.objects.all()
-    return render(request, 'catalog/add_product.html', {'categories': categories})
+        return self.get(request, *args, **kwargs)

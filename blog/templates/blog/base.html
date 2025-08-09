@@ -1,0 +1,40 @@
+{% extends 'catalog/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+/* Дополнительные стили для блога */
+.blog-post {
+    margin-bottom: 2rem;
+}
+
+.blog-post-meta {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.blog-preview-image {
+    max-height: 300px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.blog-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.blog-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.view-count {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.view-count i {
+    margin-right: 0.25rem;
+}
+</style>
+{% endblock %}
