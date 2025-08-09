@@ -1,0 +1,117 @@
+{% extends 'catalog/base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - Skystore{% endblock %}
+{% block description %}{{ product.description|truncatewords:20 }}{% endblock %}
+
+{% block content %}
+<!-- Навигационные крошки -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'index' %}">Главная</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'index' %}">{{ product.category.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <!-- Основная информация о товаре -->
+    <div class="col-lg-8">
+        <div class="card mb-4 shadow-sm">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 300px; object-fit: cover;">
+            {% else %}
+            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                <span class="text-muted">Изображение отсутствует</span>
+            </div>
+            {% endif %}
+
+            <div class="card-body">
+                <h1 class="card-title">{{ product.name }}</h1>
+                <p class="card-text">{{ product.description|linebreaks }}</p>
+
+                <!-- Информация о товаре -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Категория:</h6>
+                        <p>{{ product.category.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Дата добавления:</h6>
+                        <p>{{ product.created_at|date:"d.m.Y" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <!-- Цена и кнопка покупки -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body text-center">
+                <h2 class="text-primary mb-3">{{ product.price }} ₽</h2>
+                <button class="btn btn-primary btn-lg w-100 mb-2">
+                    Купить сейчас
+                </button>
+                <button class="btn btn-outline-primary w-100">
+                    Добавить в корзину
+                </button>
+            </div>
+        </div>
+
+        <!-- Дополнительная информация -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Информация</h5>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>ID товара:</strong> {{ product.id }}<br>
+                    <strong>Создан:</strong> {{ product.created_at|date:"d.m.Y H:i" }}<br>
+                    <strong>Обновлен:</strong> {{ product.updated_at|date:"d.m.Y H:i" }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Похожие товары -->
+{% if related_products %}
+<div class="row mt-5">
+    <div class="col-12">
+        <h3 class="mb-4">Похожие товары</h3>
+        <div class="row">
+            {% for related_product in related_products %}
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100 shadow-sm">
+                    {% if related_product.image %}
+                    <img src="{{ related_product.image.url }}" class="card-img-top" alt="{{ related_product.name }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <span class="text-muted">Нет фото</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title">{{ related_product.name }}</h6>
+                        <p class="card-text text-muted small flex-grow-1">
+                            {{ related_product.description|truncatewords:10 }}
+                        </p>
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="text-primary">{{ related_product.price }} ₽</strong>
+                                <a href="{% url 'product_detail' related_product.id %}" class="btn btn-sm btn-outline-primary">
+                                    Подробнее
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
