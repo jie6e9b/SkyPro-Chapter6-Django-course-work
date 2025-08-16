@@ -4,8 +4,8 @@ from django.http import HttpRequest, HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-
 from .models import Product, ContactInfo, Category
+from .forms import ProductForm
 import re
 
 
@@ -59,35 +59,44 @@ class ProductDetailView(DetailView):
 
 
 class AddProductView(CreateView):
-    """Class-based view для добавления нового товара"""
+    """Class-based view для добавления нового товара с использованием формы"""
     
     model = Product
+    form_class = ProductForm
     template_name = 'catalog/add_product.html'
-    fields = ['name', 'description', 'price', 'category', 'image']
     success_url = reverse_lazy('index')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Добавить товар - Skystore'
-        context['button_text'] = 'Добавить товар'
-        context['cancel_url'] = reverse_lazy('index')
+        context.update({
+            'title': 'Добавить товар - Skystore',
+            'button_text': 'Добавить товар',
+            'cancel_url': reverse_lazy('index'),
+            'form_title': 'Создание нового товара'
+        })
         return context
     
     def form_valid(self, form):
-        messages.success(self.request, 'Товар успешно добавлен!')
+        messages.success(
+            self.request, 
+            f'Товар "{form.cleaned_data["name"]}" успешно добавлен!'
+        )
         return super().form_valid(form)
     
     def form_invalid(self, form):
-        messages.error(self.request, 'Пожалуйста, исправьте ошибки в форме.')
+        messages.error(
+            self.request, 
+            'Пожалуйста, исправьте ошибки в форме.'
+        )
         return super().form_invalid(form)
 
 
 class EditProductView(UpdateView):
-    """Class-based view для редактирования товара"""
+    """Class-based view для редактирования товара с использованием формы"""
     
     model = Product
-    template_name = 'catalog/add_product.html'  # Используем тот же шаблон
-    fields = ['name', 'description', 'price', 'category', 'image']
+    form_class = ProductForm
+    template_name = 'catalog/add_product.html'
     pk_url_kwarg = 'product_id'
     
     def get_success_url(self):
@@ -95,18 +104,27 @@ class EditProductView(UpdateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = f'Редактировать {self.object.name} - Skystore'
-        context['button_text'] = 'Сохранить изменения'
-        context['cancel_url'] = reverse_lazy('product_detail', kwargs={'product_id': self.object.pk})
-        context['is_edit'] = True
+        context.update({
+            'title': f'Редактировать {self.object.name} - Skystore',
+            'button_text': 'Сохранить изменения',
+            'cancel_url': reverse_lazy('product_detail', kwargs={'product_id': self.object.pk}),
+            'form_title': f'Редактирование товара "{self.object.name}"',
+            'is_edit': True
+        })
         return context
     
     def form_valid(self, form):
-        messages.success(self.request, 'Товар успешно обновлен!')
+        messages.success(
+            self.request, 
+            f'Товар "{form.cleaned_data["name"]}" успешно обновлен!'
+        )
         return super().form_valid(form)
     
     def form_invalid(self, form):
-        messages.error(self.request, 'Пожалуйста, исправьте ошибки в форме.')
+        messages.error(
+            self.request, 
+            'Пожалуйста, исправьте ошибки в форме.'
+        )
         return super().form_invalid(form)
 
 
@@ -120,11 +138,18 @@ class DeleteProductView(DeleteView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = f'Удалить {self.object.name} - Skystore'
+        context.update({
+            'title': f'Удалить {self.object.name} - Skystore',
+            'cancel_url': reverse_lazy('product_detail', kwargs={'product_id': self.object.pk})
+        })
         return context
     
     def delete(self, request, *args, **kwargs):
-        messages.success(self.request, 'Товар успешно удален!')
+        product_name = self.get_object().name
+        messages.success(
+            self.request, 
+            f'Товар "{product_name}" успешно удален!'
+        )
         return super().delete(request, *args, **kwargs)
 
 
