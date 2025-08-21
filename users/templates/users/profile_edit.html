@@ -1,0 +1,181 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block page_title %}Редактирование профиля{% endblock %}
+
+{% block user_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Хлебные крошки -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'catalog:index' %}">Главная</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'users:profile' %}">Профиль</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Редактирование</li>
+            </ol>
+        </nav>
+
+        <!-- Карточка редактирования профиля -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-gear me-2" style="font-size: 1.5rem;"></i>
+                    <h4 class="card-title mb-0">Редактирование профиля</h4>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mb-4">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <!-- Левая колонка -->
+                        <div class="col-md-6">
+                            <!-- Имя пользователя -->
+                            <div class="mb-3">
+                                <label for="id_username" class="form-label">
+                                    <i class="bi bi-person me-1"></i>{{ form.username.label }}
+                                </label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.username.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">
+                                    <i class="bi bi-envelope me-1"></i>{{ form.email.label }}
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Имя -->
+                            <div class="mb-3">
+                                <label for="id_first_name" class="form-label">
+                                    <i class="bi bi-person-badge me-1"></i>{{ form.first_name.label }}
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.first_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Правая колонка -->
+                        <div class="col-md-6">
+                            <!-- Фамилия -->
+                            <div class="mb-3">
+                                <label for="id_last_name" class="form-label">
+                                    <i class="bi bi-person-badge-fill me-1"></i>{{ form.last_name.label }}
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.last_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Телефон -->
+                            <div class="mb-3">
+                                <label for="id_phone_number" class="form-label">
+                                    <i class="bi bi-telephone me-1"></i>{{ form.phone_number.label }}
+                                </label>
+                                {{ form.phone_number }}
+                                {% if form.phone_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.phone_number.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if form.phone_number.help_text %}
+                                    <div class="form-text">{{ form.phone_number.help_text }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Аватар -->
+                            <div class="mb-3">
+                                <label for="id_avatar" class="form-label">
+                                    <i class="bi bi-image me-1"></i>{{ form.avatar.label }}
+                                </label>
+                                
+                                {% if user.avatar %}
+                                    <div class="mb-2">
+                                        <img src="{{ user.avatar.url }}" alt="Текущий аватар" 
+                                             class="img-thumbnail" style="max-height: 100px;">
+                                        <small class="text-muted d-block">Текущее изображение</small>
+                                    </div>
+                                {% endif %}
+                                
+                                {{ form.avatar }}
+                                {% if form.avatar.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.avatar.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if form.avatar.help_text %}
+                                    <div class="form-text">{{ form.avatar.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Адрес -->
+                    <div class="mb-4">
+                        <label for="id_address" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>{{ form.address.label }}
+                        </label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.address.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -41,7 +42,7 @@ class BlogPostDetailView(DetailView):
         obj.refresh_from_db()  # обновляем с обновленным счетчиком
         return obj
 
-class BlogPostCreateView(CreateView):
+class BlogPostCreateView(LoginRequiredMixin, CreateView):
     model = BlogPost
     template_name = 'blog/post_form.html'
     fields = ['title', 'content', 'preview', 'is_published']
@@ -53,7 +54,7 @@ class BlogPostCreateView(CreateView):
         return context
 
 
-class BlogPostUpdateView(UpdateView):
+class BlogPostUpdateView(LoginRequiredMixin, UpdateView):
     model = BlogPost
     template_name = 'blog/post_form.html'
     fields = ['title', 'content', 'preview', 'is_published']
@@ -67,7 +68,7 @@ class BlogPostUpdateView(UpdateView):
         return reverse_lazy('blog:post_detail', kwargs={'pk': self.object.pk})
 
 
-class BlogPostDeleteView(DeleteView):
+class BlogPostDeleteView(LoginRequiredMixin, DeleteView):
     model = BlogPost
     template_name = 'blog/post_confirm_delete.html'
     success_url = reverse_lazy('blog:post_list')

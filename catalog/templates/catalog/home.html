@@ -5,14 +5,31 @@
 {% block description %}Каталог цифровых товаров - плагины, код, утилиты для разработчиков{% endblock %}
 
 {% block page_header %}
-<div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-    <h1 class="display-4">Каталог товаров</h1>
-    <p class="lead">Лучшие цифровые решения для ваших проектов</p>
 
-</div>
 {% endblock %}
 
 {% block content %}
+
+<div class="row mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="mb-0">Каталог товаров</h1>
+        </div>
+        {% if user.is_authenticated %}
+        <div>
+            <a href="{% url 'catalog:add_product' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>
+                <span class="d-none d-sm-inline">Добавить товар</span>
+                <i class="bi bi-plus d-sm-none"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+
+
 <div class="row">
     <div class="col-12">
         {% if products %}
@@ -24,9 +41,12 @@
                         {% if product.image %}
                         <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
                         {% else %}
-                        <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <i class="bi bi-image text-white" style="font-size: 3rem; opacity: 0.7;"></i>
-                        </div>
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <div class="text-center">
+                                    <i class="bi bi-image" style="font-size: 2rem; color: #6c757d;"></i>
+                                    <p class="text-muted mt-2 mb-0 small">Изображение отсутствует</p>
+                                </div>
+                            </div>
                         {% endif %}
 
                         <div class="card-body d-flex flex-column">
@@ -48,7 +68,7 @@
                         <div class="card-footer bg-transparent border-0">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'product_detail' product.id %}"
+                                    <a href="{% url 'catalog:product_detail' product.id %}"
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-eye me-1"></i>Подробнее
                                     </a>
@@ -189,7 +209,7 @@
                 </div>
                 <h3 class="text-muted">Товары не найдены</h3>
                 <p class="lead text-muted">В каталоге пока нет товаров.</p>
-                <a href="{% url 'add_product' %}" class="btn btn-primary mt-3">
+                <a href="{% url 'catalog:add_product' %}" class="btn btn-primary mt-3">
                     <i class="bi bi-plus-circle me-2"></i>
                     Добавить первый товар
                 </a>

@@ -8,8 +8,8 @@
 <!-- Навигационные крошки -->
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'index' %}">Главная</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'index' %}">{{ product.category.name }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'catalog:index' %}">Главная</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'catalog:index' %}">{{ product.category.name }}</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
     </ol>
 </nav>
@@ -35,18 +35,21 @@
             {% endif %}
 
             <div class="card-body">
-                <!-- Кнопки действий для товара -->
+                <!-- Кнопки управления только для авторизованных -->
+
+                {% if user.is_authenticated %}
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h1 class="card-title mb-0">{{ product.name }}</h1>
                     <div class="btn-group" role="group">
-                        <a href="{% url 'edit_product' product.id %}" class="btn btn-outline-primary btn-sm">
+                        <a href="{% url 'catalog:edit_product' product.id %}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-pencil-square"></i> Редактировать
                         </a>
-                        <a href="{% url 'delete_product' product.id %}" class="btn btn-outline-danger btn-sm">
+                        <a href="{% url 'catalog:delete_product' product.id %}" class="btn btn-outline-danger btn-sm">
                             <i class="bi bi-trash"></i> Удалить
                         </a>
                     </div>
                 </div>
+                {% endif %}
 
                 <p class="card-text">{{ product.description|linebreaks }}</p>
 
@@ -80,7 +83,7 @@
 
                 <!-- Дополнительные действия -->
                 <div class="d-grid gap-2">
-                    <a href="{% url 'index' %}" class="btn btn-outline-secondary">
+                    <a href="{% url 'catalog:index' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Вернуться к каталогу
                     </a>
                 </div>
@@ -136,7 +139,7 @@
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between align-items-center">
                                 <strong class="text-primary">{{ related_product.price }} ₽</strong>
-                                <a href="{% url 'product_detail' related_product.id %}" class="btn btn-sm btn-outline-primary">
+                                <a href="{% url 'catalog:product_detail' related_product.id %}" class="btn btn-sm btn-outline-primary">
                                     Подробнее
                                 </a>
                             </div>
@@ -149,4 +152,5 @@
     </div>
 </div>
 {% endif %}
+
 {% endblock %}

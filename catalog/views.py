@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
@@ -58,20 +59,20 @@ class ProductDetailView(DetailView):
         return context
 
 
-class AddProductView(CreateView):
+class AddProductView(LoginRequiredMixin, CreateView):
     """Class-based view для добавления нового товара с использованием формы"""
     
     model = Product
     form_class = ProductForm
     template_name = 'catalog/add_product.html'
-    success_url = reverse_lazy('index')
+    success_url = reverse_lazy('catalog:index')  # Исправлено
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
             'title': 'Добавить товар - Skystore',
             'button_text': 'Добавить товар',
-            'cancel_url': reverse_lazy('index'),
+            'cancel_url': reverse_lazy('catalog:index'),  # Исправлено
             'form_title': 'Создание нового товара'
         })
         return context
@@ -91,7 +92,7 @@ class AddProductView(CreateView):
         return super().form_invalid(form)
 
 
-class EditProductView(UpdateView):
+class EditProductView(LoginRequiredMixin, UpdateView):
     """Class-based view для редактирования товара с использованием формы"""
     
     model = Product
@@ -100,14 +101,14 @@ class EditProductView(UpdateView):
     pk_url_kwarg = 'product_id'
     
     def get_success_url(self):
-        return reverse_lazy('product_detail', kwargs={'product_id': self.object.pk})
+        return reverse_lazy('catalog:product_detail', kwargs={'product_id': self.object.pk})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
             'title': f'Редактировать {self.object.name} - Skystore',
             'button_text': 'Сохранить изменения',
-            'cancel_url': reverse_lazy('product_detail', kwargs={'product_id': self.object.pk}),
+            'cancel_url': reverse_lazy('catalog:product_detail', kwargs={'product_id': self.object.pk}),
             'form_title': f'Редактирование товара "{self.object.name}"',
             'is_edit': True
         })
@@ -128,19 +129,19 @@ class EditProductView(UpdateView):
         return super().form_invalid(form)
 
 
-class DeleteProductView(DeleteView):
+class DeleteProductView(LoginRequiredMixin, DeleteView):
     """Class-based view для удаления товара"""
     
     model = Product
     template_name = 'catalog/delete_product.html'
     pk_url_kwarg = 'product_id'
-    success_url = reverse_lazy('index')
+    success_url = reverse_lazy('catalog:index')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
             'title': f'Удалить {self.object.name} - Skystore',
-            'cancel_url': reverse_lazy('product_detail', kwargs={'product_id': self.object.pk})
+            'cancel_url': reverse_lazy('catalog:product_detail', kwargs={'product_id': self.object.pk})
         })
         return context
     
@@ -218,6 +219,7 @@ class ContactsView(TemplateView):
                 f'Спасибо, {name}! Ваше сообщение успешно отправлено. '
                 f'Мы свяжемся с вами в ближайшее время.'
             )
-            return redirect('contacts')
+            # Исправлено: добавлено пространство имен
+            return redirect('catalog:contacts')
 
         return self.get(request, *args, **kwargs)

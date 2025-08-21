@@ -1,0 +1,196 @@
+{% extends 'users/base.html' %}
+
+{% block page_title %}Профиль пользователя{% endblock %}
+
+{% block user_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Карточка профиля -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-circle me-2" style="font-size: 1.5rem;"></i>
+                    <h4 class="card-title mb-0">Профиль пользователя</h4>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-4">
+                        <!-- Аватар пользователя -->
+                        <div class="mb-3">
+                            {% if user.avatar %}
+                                <img src="{{ user.avatar.url }}" alt="{{ user.username }}"
+                                     class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
+                            {% else %}
+                                <i class="bi bi-person-circle text-muted" style="font-size: 8rem;"></i>
+                            {% endif %}
+                        </div>
+                        <h5 class="text-primary">{{ user.username }}</h5>
+                        {% if user.first_name or user.last_name %}
+                        <p class="text-muted mb-0">{{ user.first_name }} {{ user.last_name }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-8">
+                        <!-- Информация о пользователе -->
+                        <h6 class="text-uppercase text-muted mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Основная информация
+                        </h6>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Имя пользователя:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.username }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Email:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.email|default:"Не указан" }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Имя:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.first_name|default:"Не указано" }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Фамилия:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.last_name|default:"Не указана" }}
+                            </div>
+                        </div>
+
+                        {% if user.phone_number %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Телефон:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.phone_number }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if user.address %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Адрес:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.address }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Дата регистрации:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ user.date_joined|date:"d.m.Y H:i" }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Последний вход:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if user.last_login %}
+                                    {{ user.last_login|date:"d.m.Y H:i" }}
+                                {% else %}
+                                    Никогда
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Статус:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Активен</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Неактивен</span>
+                                {% endif %}
+                                {% if user.is_staff %}
+                                    <span class="badge bg-warning">Сотрудник</span>
+                                {% endif %}
+                                {% if user.is_superuser %}
+                                    <span class="badge bg-danger">Суперпользователь</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Статистика пользователя -->
+                <hr class="my-4">
+                <h6 class="text-uppercase text-muted mb-3">
+                    <i class="bi bi-graph-up me-1"></i>
+                    Статистика
+                </h6>
+
+                <div class="row text-center">
+                    <div class="col-md-4 mb-3">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-box text-primary mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="mb-0">0</h4>
+                            <small class="text-muted">Товаров добавлено</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-chat text-info mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="mb-0">0</h4>
+                            <small class="text-muted">Сообщений в блоге</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="border rounded p-3">
+                            <i class="bi bi-calendar-check text-success mb-2" style="font-size: 2rem;"></i>
+                            <h4 class="mb-0">{{ user.date_joined|timesince }}</h4>
+                            <small class="text-muted">на сайте</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer bg-transparent">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'catalog:index' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        На главную
+                    </a>
+                    <div>
+                        <a href="{% url 'users:profile_edit' %}" class="btn btn-outline-primary me-2">
+                            <i class="bi bi-pencil me-1"></i>
+                            Редактировать
+                        </a>
+                        <a href="{% url 'users:logout' %}" class="btn btn-outline-danger">
+                            <i class="bi bi-box-arrow-right me-1"></i>
+                            Выйти
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
