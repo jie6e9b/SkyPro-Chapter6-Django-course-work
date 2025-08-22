@@ -5,13 +5,17 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-8">
-        <h1 class="mb-4">Блог</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{% url 'blog:post_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Новая запись
-        </a>
+    <div class="col-12">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+            <h1 class="mb-3 mb-sm-0">Блог</h1>
+            {% if user.is_authenticated %}
+            <a href="{% url 'blog:post_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>
+                <span class="d-none d-sm-inline">Новая запись</span>
+                <i class="bi bi-plus d-sm-none"></i>
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -23,26 +27,52 @@
                     {% if post.preview %}
                         <img src="{{ post.preview.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
                     {% else %}
-                        <div class="bg-light text-center py-5">
-                            <i class="bi bi-image" style="font-size: 3rem;"></i>
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <div class="text-center">
+                                <i class="bi bi-image" style="font-size: 2rem; color: #6c757d;"></i>
+                                <p class="text-muted mt-2 mb-0 small">Изображение отсутствует</p>
+                            </div>
                         </div>
                     {% endif %}
-                    <div class="card-body">
+                    <div class="card-body d-flex flex-column">
                         <h5 class="card-title">{{ post.title }}</h5>
-                        <p class="card-text text-muted">
+                        <p class="card-text text-muted flex-grow-1">
                             {{ post.content|truncatewords:20 }}
                         </p>
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar me-1"></i>{{ post.created_at|date:"d.m.Y" }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-eye me-1"></i>{{ post.view_count }}
+                            </small>
+                        </div>
                     </div>
-                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            <i class="bi bi-calendar me-1"></i>{{ post.created_at|date:"d.m.Y" }}
-                        </small>
-                        <small class="text-muted">
-                            <i class="bi bi-eye me-1"></i>{{ post.view_count }}
-                        </small>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <a href="{% url 'blog:post_detail' post.id %}" class="btn btn-outline-primary w-100">Читать</a>
+                    <div class="card-footer bg-transparent border-0">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <a href="{% url 'blog:post_detail' post.id %}" class="btn btn-outline-primary">
+                                <i class="bi bi-book me-1"></i>Читать
+                            </a>
+                            
+                            <!-- Кнопки управления только для авторизованных пользователей -->
+                            {% if user.is_authenticated %}
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'blog:post_update' post.id %}" 
+                                   class="btn btn-outline-warning" 
+                                   title="Редактировать запись">
+                                    <i class="bi bi-pencil"></i>
+                                    <span class="d-none d-lg-inline ms-1">Редактировать</span>
+                                </a>
+                                <a href="{% url 'blog:post_delete' post.id %}" 
+                                   class="btn btn-outline-danger" 
+                                   title="Удалить запись"
+                                   onclick="return confirm('Вы уверены, что хотите удалить эту запись?')">
+                                    <i class="bi bi-trash"></i>
+                                    <span class="d-none d-lg-inline ms-1">Удалить</span>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -52,70 +82,123 @@
     {% if is_paginated %}
         <nav aria-label="Навигация по страницам" class="mt-4">
             <ul class="pagination justify-content-center">
+                <!-- Кнопка "В начало" -->
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1" aria-label="Первая">
-                            <span aria-hidden="true">&laquo;&laquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Предыдущая">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" aria-label="Первая">
-                            <span aria-hidden="true">&laquo;&laquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" aria-label="Предыдущая">
-                            <span aria-hidden="true">&laquo;</span>
+                        <a class="page-link" href="?page=1" aria-label="В начало">
+                            <i class="bi bi-chevron-double-left"></i>
+                            <span class="d-none d-sm-inline ms-1">В начало</span>
                         </a>
                     </li>
                 {% endif %}
 
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                        <li class="page-item active"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                    {% endif %}
-                {% endfor %}
-
-                {% if page_obj.has_next %}
+                <!-- Кнопка "Предыдущая" -->
+                {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Следующая">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Последняя">
-                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Предыдущая">
+                            <i class="bi bi-chevron-left"></i>
+                            <span class="d-none d-sm-inline ms-1">Предыдущая</span>
                         </a>
                     </li>
                 {% else %}
                     <li class="page-item disabled">
-                        <a class="page-link" href="#" aria-label="Следующая">
-                            <span aria-hidden="true">&raquo;</span>
+                        <span class="page-link">
+                            <i class="bi bi-chevron-left"></i>
+                            <span class="d-none d-sm-inline ms-1">Предыдущая</span>
+                        </span>
+                    </li>
+                {% endif %}
+
+                <!-- Номера страниц -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link">
+                                {{ num }}
+                                <span class="sr-only">(текущая)</span>
+                            </span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                        {% if num == 1 and page_obj.number > 4 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">1</a>
+                        </li>
+                        {% if page_obj.number > 5 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% elif num == page_obj.paginator.num_pages and page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                        {% if page_obj.number < page_obj.paginator.num_pages|add:'-4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Кнопка "Следующая" -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Следующая">
+                            <span class="d-none d-sm-inline me-1">Следующая</span>
+                            <i class="bi bi-chevron-right"></i>
                         </a>
                     </li>
+                {% else %}
                     <li class="page-item disabled">
-                        <a class="page-link" href="#" aria-label="Последняя">
-                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        <span class="page-link">
+                            <span class="d-none d-sm-inline me-1">Следующая</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </span>
+                    </li>
+                {% endif %}
+
+                <!-- Кнопка "В конец" -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="В конец">
+                            <span class="d-none d-sm-inline me-1">В конец</span>
+                            <i class="bi bi-chevron-double-right"></i>
                         </a>
                     </li>
                 {% endif %}
             </ul>
         </nav>
+        
+        <!-- Информация о текущем положении -->
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Показано {{ page_obj.start_index }}–{{ page_obj.end_index }} из {{ page_obj.paginator.count }} записей
+            </small>
+        </div>
     {% endif %}
 {% else %}
-    <div class="alert alert-info">
-        <h4 class="alert-heading">Записей пока нет</h4>
-        <p>В блоге пока нет опубликованных записей.</p>
-        <hr>
-        <p class="mb-0">Вы можете создать первую запись, нажав на кнопку "Новая запись".</p>
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="bi bi-journal-text text-muted" style="font-size: 4rem;"></i>
+        </div>
+        <h3 class="text-muted">Записей пока нет</h3>
+        <p class="lead text-muted">В блоге пока нет опубликованных записей.</p>
+        {% if user.is_authenticated %}
+        <a href="{% url 'blog:post_create' %}" class="btn btn-primary mt-3">
+            <i class="bi bi-plus-circle me-2"></i>
+            Создать первую запись
+        </a>
+        {% else %}
+        <p class="text-muted">
+            <a href="{% url 'users:login' %}" class="text-decoration-none">Войдите</a>, чтобы создать записи
+        </p>
+        {% endif %}
     </div>
 {% endif %}
 {% endblock %}

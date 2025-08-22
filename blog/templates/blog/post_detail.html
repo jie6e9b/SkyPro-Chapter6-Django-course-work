@@ -13,6 +13,7 @@
             </ol>
         </nav>
     </div>
+    {% if user.is_authenticated %}
     <div class="col-md-4 text-end">
         <div class="btn-group" role="group">
             <a href="{% url 'blog:post_update' post.id %}" class="btn btn-outline-primary">
@@ -23,6 +24,7 @@
             </a>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <div class="card shadow-sm mb-4">
