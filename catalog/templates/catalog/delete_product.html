@@ -1,46 +1,131 @@
 {% extends 'catalog/base.html' %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Удалить {{ object.name }} - Skystore{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow border-danger">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
             <div class="card-header bg-danger text-white">
-                <h3 class="mb-0">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Подтвердите удаление
-                </h3>
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Подтверждение удаления
+                </h4>
             </div>
             <div class="card-body">
+                <!-- Информация о товаре -->
                 <div class="text-center mb-4">
-                    {% if product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail mb-3" style="max-height: 200px;">
+                    {% if object.image %}
+                    <img src="{{ object.image.url }}" 
+                         class="img-fluid rounded mb-3" 
+                         alt="{{ object.name }}"
+                         style="max-height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center mb-3" style="height: 200px;">
+                        <div class="text-center">
+                            <i class="bi bi-image" style="font-size: 2rem; color: #6c757d;"></i>
+                            <p class="text-muted mt-2 mb-0">Изображение отсутствует</p>
+                        </div>
+                    </div>
                     {% endif %}
-                    <h4>{{ product.name }}</h4>
-                    <p class="text-muted">{{ product.category.name }}</p>
-                </div>
-                
-                <div class="alert alert-warning">
-                    <strong>Внимание!</strong> Вы действительно хотите удалить этот товар? 
-                    Это действие нельзя будет отменить.
+                    
+                    <h3 class="text-danger">{{ object.name }}</h3>
+                    <p class="text-muted">{{ object.description|truncatewords:20 }}</p>
                 </div>
 
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                        <a href="{% url 'catalog:product_detail' product.id %}" class="btn btn-outline-secondary btn-lg me-md-2">
-                            <i class="bi bi-arrow-left me-2"></i>
-                            Отмена
-                        </a>
-                        <button type="submit" class="btn btn-danger btn-lg">
-                            <i class="bi bi-trash me-2"></i>
-                            Да, удалить товар
-                        </button>
+                <!-- Предупреждающее сообщение -->
+                <div class="alert alert-danger" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Внимание!
+                    </h5>
+                    
+                    {% if is_owner and is_moderator %}
+                        <p class="mb-2">Вы удаляете этот товар как <strong>владелец и модератор</strong>.</p>
+                    {% elif is_owner %}
+                        <p class="mb-2">Вы удаляете <strong>ваш собственный товар</strong>.</p>
+                    {% elif is_moderator %}
+                        <p class="mb-2">Вы удаляете этот товар как <strong>модератор</strong>.</p>
+                        <p class="mb-2"><small><strong>Владелец:</strong> {{ object.owner.get_full_name|default:object.owner.username }}</small></p>
+                    {% endif %}
+                    
+                    <hr>
+                    <p class="mb-0">
+                        <strong>Это действие нельзя отменить!</strong>
+                        Все данные о товаре будут безвозвратно удалены.
+                    </p>
+                </div>
+
+                <!-- Дополнительная информация -->
+                <div class="row">
+                    <div class="col-sm-6">
+                        <p><strong>Цена:</strong> {{ object.price }} ₽</p>
+                        <p><strong>Категория:</strong> {{ object.category.name }}</p>
                     </div>
+                    <div class="col-sm-6">
+                        <p><strong>Создан:</strong> {{ object.created_at|date:"d.m.Y H:i" }}</p>
+                        <p><strong>Статус:</strong> 
+                            {% if object.publish == 'pending' %}
+                                <span class="text-warning">На модерации</span>
+                            {% elif object.publish == 'published' %}
+                                <span class="text-success">Опубликован</span>
+                            {% elif object.publish == 'rejected' %}
+                                <span class="text-danger">Отклонен</span>
+                            {% elif object.publish == 'unpublished' %}
+                                <span class="text-muted">Снят с публикации</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer bg-light">
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    
+                    <!-- Кнопка отмены -->
+                    <a href="{{ cancel_url }}" class="btn btn-secondary flex-fill">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Отменить
+                    </a>
+                    
+                    <!-- Кнопка удаления -->
+                    <button type="submit" class="btn btn-danger flex-fill">
+                        <i class="bi bi-trash me-1"></i>
+                        {% if is_moderator and not is_owner %}
+                            Удалить (как модератор)
+                        {% else %}
+                            Удалить навсегда
+                        {% endif %}
+                    </button>
                 </form>
+                
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Убедитесь в правильности выбора перед подтверждением
+                    </small>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Подтверждение удаления
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.querySelector('form');
+    deleteForm.addEventListener('submit', function(e) {
+        const productName = '{{ object.name|escapejs }}';
+        const confirmText = `Вы действительно хотите удалить товар "${productName}"?\n\nЭто действие нельзя отменить!`;
+        
+        if (!confirm(confirmText)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
 {% endblock %}

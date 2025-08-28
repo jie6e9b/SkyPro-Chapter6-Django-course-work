@@ -85,7 +85,8 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'category', 'image']
+        # Исключаем поле owner из формы - оно будет заполняться автоматически
+        fields = ['name', 'description', 'price', 'category', 'image', 'publish']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -109,8 +110,11 @@ class ProductForm(forms.ModelForm):
             }),
             'image': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/jpeg,image/png',  # Ограничиваем типы файлов
-                'capture': 'environment'  # Для мобильных устройств
+                'accept': 'image/jpeg,image/png',
+                'capture': 'environment'
+            }),
+            'publish': forms.Select(attrs={
+                'class': 'form-select'
             })
         }
         labels = {
@@ -118,13 +122,15 @@ class ProductForm(forms.ModelForm):
             'description': 'Описание',
             'price': 'Цена (₽)',
             'category': 'Категория',
-            'image': 'Изображение'
+            'image': 'Изображение',
+            'publish': 'Статус публикации'
         }
         help_texts = {
             'name': 'Максимум 200 символов',
             'description': 'Подробное описание продукта',
             'price': 'Укажите цену в рублях',
-            'image': 'Поддерживаются форматы: JPEG, PNG. Максимальный размер: 5 МБ'
+            'image': 'Поддерживаются форматы: JPEG, PNG. Максимальный размер: 5 МБ',
+            'publish': 'Выберите статус публикации товара'
         }
 
     def __init__(self, *args, **kwargs):
@@ -185,4 +191,3 @@ class ProductForm(forms.ModelForm):
             )
 
         return price
-

@@ -11,24 +11,61 @@
 {% block content %}
 
 <div class="row mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
+        <div class="mb-2 mb-md-0">
             <h1 class="mb-0">Каталог товаров</h1>
         </div>
-        {% if user.is_authenticated %}
-        <div>
-            <a href="{% url 'catalog:add_product' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle me-1"></i>
-                <span class="d-none d-sm-inline">Добавить товар</span>
-                <i class="bi bi-plus d-sm-none"></i>
-            </a>
+
+        <div class="d-flex align-items-center gap-3">
+            {% if user.is_authenticated and can_view_unpublished %}
+            <!-- Фильтр для неопубликованных товаров -->
+            <div class="form-check form-switch">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="showUnpublishedToggle"
+                    {% if show_unpublished %}checked{% endif %}
+                    onchange="toggleUnpublishedFilter(this.checked)"
+                >
+                <label class="form-check-label text-muted small" for="showUnpublishedToggle">
+                    <i class="bi bi-eye-slash me-1"></i>
+                    Неопубликованные
+                </label>
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <div>
+                <a href="{% url 'catalog:add_product' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    <span class="d-none d-sm-inline">Добавить товар</span>
+                    <i class="bi bi-plus d-sm-none"></i>
+                </a>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
 
+{% if show_unpublished and can_view_unpublished %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Режим модерации:</strong> Показаны неопубликованные товары (на модерации, отклоненные, снятые с публикации).
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
 
-
+<script>
+function toggleUnpublishedFilter(showUnpublished) {
+    const url = new URL(window.location);
+    if (showUnpublished) {
+        url.searchParams.set('show_unpublished', 'true');
+    } else {
+        url.searchParams.delete('show_unpublished');
+    }
+    window.location.href = url.toString();
+}
+</script>
 
 <div class="row">
     <div class="col-12">
@@ -37,7 +74,27 @@
             <div class="row">
                 {% for product in products %}
                 <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100 shadow-sm border-0">
+                    <div class="card h-100 shadow-sm border-0 position-relative">
+                        
+                        <!-- Бейдж статуса публикации -->
+                        {% if product.publish != 'published' and can_view_unpublished %}
+                        <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                            {% if product.publish == 'pending' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-clock me-1"></i>На модерации
+                                </span>
+                            {% elif product.publish == 'rejected' %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Отклонен
+                                </span>
+                            {% elif product.publish == 'unpublished' %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-eye-slash me-1"></i>Снят с публикации
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
                         {% if product.image %}
                         <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
                         {% else %}
