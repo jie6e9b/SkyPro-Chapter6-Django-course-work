@@ -68,46 +68,68 @@ class OwnerRequiredMixin(UserPassesTestMixin):
 
 class IndexView(ListView):
     """Class-based view для отображения домашней страницы каталога с пагинацией"""
-    
+
     model = Product
     template_name = 'catalog/home.html'
     context_object_name = 'products'
     paginate_by = 6
     ordering = ['-created_at']
-    
+
     def get_queryset(self):
         queryset = Product.objects.select_related('category')
-        
+
         # Проверяем фильтр для неопубликованных товаров
         show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
-        
-        if show_unpublished and self.request.user.has_perm('catalog.can_unpublish_product'):
-            # Показываем неопубликованные товары (все статусы кроме 'published')
-            queryset = queryset.exclude(publish='published')
+
+        if show_unpublished:
+            if self.request.user.is_authenticated:
+                if self.request.user.has_perm('catalog.can_unpublish_product'):
+                    # Модераторы видят все неопубликованные товары
+                    queryset = queryset.exclude(publish='published')
+                else:
+                    # Обычные пользователи видят только свои неопубликованные товары
+                    queryset = queryset.filter(
+                        owner=self.request.user
+                    ).exclude(publish='published')
+            else:
+                # Неаутентифицированные пользователи - показываем только опубликованные
+                queryset = queryset.filter(publish='published')
         else:
             # Показываем только опубликованные товары
             queryset = queryset.filter(publish='published')
-            
+
         return queryset.order_by('-created_at')
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
             'title': 'Главная страница - Skystore',
             'description': 'Добро пожаловать в наш каталог товаров!',
         })
-        
+
         # Добавляем информацию о фильтре в контекст
         show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
         context['show_unpublished'] = show_unpublished
         context['can_view_unpublished'] = self.request.user.has_perm('catalog.can_unpublish_product')
-        
+
+        # Добавляем информацию о возможности видеть свои неопубликованные товары
+        context['can_view_own_unpublished'] = self.request.user.is_authenticated
+
+        # Считаем количество неопубликованных товаров пользователя
+        if self.request.user.is_authenticated:
+            user_unpublished_count = Product.objects.filter(
+                owner=self.request.user
+            ).exclude(publish='published').count()
+            context['user_unpublished_count'] = user_unpublished_count
+        else:
+            context['user_unpublished_count'] = 0
+
         return context
 
 
 class ProductDetailView(DetailView):
     """Class-based view для отображения детальной информации о товаре"""
-    
+
     model = Product
     template_name = 'catalog/product_detail.html'
     context_object_name = 'product'
@@ -131,10 +153,16 @@ class ProductDetailView(DetailView):
         ).order_by('-created_at')[:4]
 
         context['related_products'] = related_products
-        
-        # Добавляем информацию о правах на просмотр неопубликованных товаров
-        context['can_view_unpublished'] = self.request.user.has_perm('catalog.can_unpublish_product')
-        
+
+        # Добавляем информацию о правах пользователя
+        user = self.request.user
+        context['can_view_unpublished'] = user.has_perm('catalog.can_unpublish_product')
+        context['is_owner'] = user.is_authenticated and product.owner == user
+        context['is_moderator'] = user.has_perm('catalog.can_unpublish_product')
+        context['can_edit'] = user.is_authenticated and product.owner == user
+        context['can_delete'] = (user.is_authenticated and product.owner == user) or user.has_perm(
+            'catalog.can_unpublish_product')
+
         return context
 
 
@@ -174,21 +202,27 @@ def toggle_product_status(request, product_id):
 
 class AddProductView(LoginRequiredMixin, CreateView):
     """Class-based view для добавления нового товара с использованием формы"""
-    
+
     model = Product
     form_class = ProductForm
     template_name = 'catalog/add_product.html'
     success_url = reverse_lazy('catalog:index')
-    
+
+    def get_form_kwargs(self):
+        """Передаем пользователя в форму"""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
     def form_valid(self, form):
         """Автоматически привязываем продукт к текущему пользователю"""
         form.instance.owner = self.request.user
         messages.success(
-            self.request, 
+            self.request,
             f'Товар "{form.cleaned_data["name"]}" успешно добавлен!'
         )
         return super().form_valid(form)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
@@ -198,26 +232,32 @@ class AddProductView(LoginRequiredMixin, CreateView):
             'form_title': 'Создание нового товара'
         })
         return context
-    
+
     def form_invalid(self, form):
         messages.error(
-            self.request, 
+            self.request,
             'Пожалуйста, исправьте ошибки в форме.'
         )
         return super().form_invalid(form)
 
 
 class EditProductView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
-    """Class-based view для редактирования товара с использованием формы"""
-    
+    """Class-based view для редактирования товара с использованием формы. Только владелец может редактировать."""
+
     model = Product
     form_class = ProductForm
     template_name = 'catalog/add_product.html'
     pk_url_kwarg = 'product_id'
-    
+
+    def get_form_kwargs(self):
+        """Передаем пользователя в форму"""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
     def get_success_url(self):
         return reverse_lazy('catalog:product_detail', kwargs={'product_id': self.object.pk})
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
@@ -228,17 +268,17 @@ class EditProductView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
             'is_edit': True
         })
         return context
-    
+
     def form_valid(self, form):
         messages.success(
-            self.request, 
+            self.request,
             f'Товар "{form.cleaned_data["name"]}" успешно обновлен!'
         )
         return super().form_valid(form)
-    
+
     def form_invalid(self, form):
         messages.error(
-            self.request, 
+            self.request,
             'Пожалуйста, исправьте ошибки в форме.'
         )
         return super().form_invalid(form)
