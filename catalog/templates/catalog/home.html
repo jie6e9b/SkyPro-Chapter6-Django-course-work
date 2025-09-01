@@ -1,236 +1,341 @@
 {% extends 'catalog/base.html' %}
 {% load static %}
 
-{% block title %}Главная страница - Skystore{% endblock %}
-{% block description %}Каталог цифровых товаров - плагины, код, утилиты для разработчиков{% endblock %}
-
-{% block page_header %}
-
-{% endblock %}
+{% block title %}{{ title }}{% endblock %}
+{% block description %}{{ description }}{% endblock %}
 
 {% block content %}
-
+<!-- Заголовок страницы -->
 <div class="row mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="mb-0">Каталог товаров</h1>
-        </div>
-        {% if user.is_authenticated %}
-        <div>
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">Каталог товаров</h1>
+                <p class="text-muted mb-0">{{ description }}</p>
+            </div>
+            {% if user.is_authenticated %}
             <a href="{% url 'catalog:add_product' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>
-                <span class="d-none d-sm-inline">Добавить товар</span>
-                <i class="bi bi-plus d-sm-none"></i>
+                Добавить товар
             </a>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
 
-
-
-
-<div class="row">
+<!-- Фильтры и переключатели -->
+<div class="row mb-4">
     <div class="col-12">
-        {% if products %}
-            <!-- Список товаров -->
-            <div class="row">
-                {% for product in products %}
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100 shadow-sm border-0">
-                        {% if product.image %}
-                        <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
-                        {% else %}
-                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
-                                <div class="text-center">
-                                    <i class="bi bi-image" style="font-size: 2rem; color: #6c757d;"></i>
-                                    <p class="text-muted mt-2 mb-0 small">Изображение отсутствует</p>
-                                </div>
-                            </div>
-                        {% endif %}
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-3 align-items-center">
 
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-truncate" title="{{ product.name }}">
-                                {{ product.name }}
-                            </h5>
-                            <p class="card-text text-muted flex-grow-1" style="font-size: 0.9rem;">
-                                {{ product.description|truncatechars:120 }}
-                            </p>
-                            {% if product.category %}
-                            <p class="card-text mb-2">
-                                <span class="badge bg-light text-dark">
-                                    <i class="bi bi-tag me-1"></i>{{ product.category.name }}
-                                </span>
-                            </p>
-                            {% endif %}
-                        </div>
-
-                        <div class="card-footer bg-transparent border-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'catalog:product_detail' product.id %}"
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye me-1"></i>Подробнее
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-cart-plus me-1"></i>В корзину
-                                    </button>
-                                </div>
-                                <div class="text-end">
-                                    <div class="fw-bold text-success" style="font-size: 1.1rem;">
-                                        {{ product.price }} ₽
-                                    </div>
-                                    <small class="text-muted">
-                                        <i class="bi bi-calendar3 me-1"></i>{{ product.created_at|date:"d.m.Y" }}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Переключатель для модераторов -->
+                    {% if can_view_unpublished %}
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox"
+                               id="moderatorUnpublishedSwitch"
+                               {% if show_unpublished %}checked{% endif %}
+                               onchange="toggleUnpublished('moderator')">
+                        <label class="form-check-label" for="moderatorUnpublishedSwitch">
+                            <i class="bi bi-shield-check me-1"></i>
+                            Все неопубликованные (модератор)
+                        </label>
                     </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Пагинация -->
-            {% if paginator.num_pages > 1 %}
-            <div class="row mt-5">
-                <div class="col-12">
-                    <nav aria-label="Навигация по страницам">
-                        <ul class="pagination justify-content-center">
-
-                            <!-- Кнопка "В начало" -->
-                            {% if products.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page=1" aria-label="В начало">
-                                    <i class="bi bi-chevron-double-left"></i>
-                                    <span class="d-none d-sm-inline ms-1">В начало</span>
-                                </a>
-                            </li>
+                    {% elif can_view_own_unpublished %}
+                    <!-- Переключатель для обычных пользователей -->
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox"
+                               id="userUnpublishedSwitch"
+                               {% if show_unpublished %}checked{% endif %}
+                               onchange="toggleUnpublished('user')">
+                        <label class="form-check-label" for="userUnpublishedSwitch">
+                            <i class="bi bi-person me-1"></i>
+                            Мои неопубликованные товары
+                            {% if user_unpublished_count > 0 %}
+                                <span class="badge bg-warning text-dark">{{ user_unpublished_count }}</span>
                             {% endif %}
+                        </label>
+                    </div>
+                    {% endif %}
 
-                            <!-- Кнопка "Предыдущая" -->
-                            {% if products.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ products.previous_page_number }}" aria-label="Предыдущая">
-                                    <i class="bi bi-chevron-left"></i>
-                                    <span class="d-none d-sm-inline ms-1">Предыдущая</span>
-                                </a>
-                            </li>
+                    <!-- Информация о текущем фильтре -->
+                    {% if show_unpublished %}
+                    <div class="alert alert-info mb-0 py-2 px-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <small>
+                            {% if can_view_unpublished %}
+                                Показаны все неопубликованные товары (модератор)
                             {% else %}
-                            <li class="page-item disabled">
-                                <span class="page-link">
-                                    <i class="bi bi-chevron-left"></i>
-                                    <span class="d-none d-sm-inline ms-1">Предыдущая</span>
-                                </span>
-                            </li>
+                                Показаны ваши неопубликованные товары
                             {% endif %}
-
-                            <!-- Номера страниц -->
-                            {% for page_num in paginator.page_range %}
-                                {% if page_num == products.number %}
-                                <li class="page-item active" aria-current="page">
-                                    <span class="page-link">
-                                        {{ page_num }}
-                                        <span class="sr-only">(текущая)</span>
-                                    </span>
-                                </li>
-                                {% elif page_num > products.number|add:'-3' and page_num < products.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
-                                </li>
-                                {% elif page_num == 1 or page_num == paginator.num_pages %}
-                                {% if page_num == 1 and products.number > 4 %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page=1">1</a>
-                                </li>
-                                {% if products.number > 5 %}
-                                <li class="page-item disabled">
-                                    <span class="page-link">...</span>
-                                </li>
-                                {% endif %}
-                                {% elif page_num == paginator.num_pages and products.number < paginator.num_pages|add:'-3' %}
-                                {% if products.number < paginator.num_pages|add:'-4' %}
-                                <li class="page-item disabled">
-                                    <span class="page-link">...</span>
-                                </li>
-                                {% endif %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ paginator.num_pages }}">{{ paginator.num_pages }}</a>
-                                </li>
-                                {% endif %}
-                                {% endif %}
-                            {% endfor %}
-
-                            <!-- Кнопка "Следующая" -->
-                            {% if products.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ products.next_page_number }}" aria-label="Следующая">
-                                    <span class="d-none d-sm-inline me-1">Следующая</span>
-                                    <i class="bi bi-chevron-right"></i>
-                                </a>
-                            </li>
-                            {% else %}
-                            <li class="page-item disabled">
-                                <span class="page-link">
-                                    <span class="d-none d-sm-inline me-1">Следующая</span>
-                                    <i class="bi bi-chevron-right"></i>
-                                </span>
-                            </li>
-                            {% endif %}
-
-                            <!-- Кнопка "В конец" -->
-                            {% if products.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ paginator.num_pages }}" aria-label="В конец">
-                                    <span class="d-none d-sm-inline me-1">В конец</span>
-                                    <i class="bi bi-chevron-double-right"></i>
-                                </a>
-                            </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-
-                    <!-- Информация о текущем положении -->
-                    <div class="text-center mt-3">
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Показано {{ products.start_index }}–{{ products.end_index }} из {{ paginator.count }} товаров
                         </small>
                     </div>
+                    {% endif %}
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Список товаров -->
+{% if products %}
+<div class="row">
+    {% for product in products %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 shadow-sm position-relative">
+
+            <!-- Бейдж статуса для неопубликованных товаров -->
+            {% if product.publish != 'published' %}
+            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                {% if product.publish == 'pending' %}
+                    <span class="badge bg-warning text-dark">
+                        <i class="bi bi-clock me-1"></i>На модерации
+                    </span>
+                {% elif product.publish == 'rejected' %}
+                    <span class="badge bg-danger">
+                        <i class="bi bi-x-circle me-1"></i>Отклонен
+                    </span>
+                {% elif product.publish == 'unpublished' %}
+                    <span class="badge bg-secondary">
+                        <i class="bi bi-eye-slash me-1"></i>Снят с публикации
+                    </span>
+                {% endif %}
             </div>
             {% endif %}
 
-        {% else %}
-            <!-- Сообщение об отсутствии товаров -->
-            <div class="text-center py-5">
-                <div class="mb-4">
-                    <i class="bi bi-box-seam text-muted" style="font-size: 4rem;"></i>
-                </div>
-                <h3 class="text-muted">Товары не найдены</h3>
-                <p class="lead text-muted">В каталоге пока нет товаров.</p>
-                <a href="{% url 'catalog:add_product' %}" class="btn btn-primary mt-3">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    Добавить первый товар
-                </a>
+            <!-- Изображение товара -->
+            <div class="product-image-container" style="height: 200px; overflow: hidden;">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}"
+                         class="card-img-top"
+                         alt="{{ product.name }}"
+                         style="height: 100%; width: 100%; object-fit: cover; object-position: center;">
+                {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center h-100">
+                        <div class="text-center">
+                            <i class="bi bi-image" style="font-size: 3rem; color: #6c757d;"></i>
+                            <p class="text-muted mt-2 mb-0">Изображение отсутствует</p>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
+
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text text-muted flex-grow-1">
+                    {{ product.description|truncatewords:15|default:"Описание отсутствует" }}
+                </p>
+
+                <!-- Дополнительная информация -->
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="bi bi-tag me-1"></i>{{ product.category.name }}
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        <i class="bi bi-calendar3 me-1"></i>{{ product.created_at|date:"d.m.Y" }}
+                    </small>
+
+                    <!-- Информация о владельце для авторизованных пользователей -->
+                    {% if user.is_authenticated %}
+                    <br>
+                    {% if product.owner == user %}
+                        <small class="text-success">
+                            <i class="bi bi-person-check me-1"></i>Ваш товар
+                        </small>
+                    {% elif can_view_unpublished %}
+                        <small class="text-muted">
+                            <i class="bi bi-person me-1"></i>{{ product.owner.get_full_name|default:product.owner.username }}
+                        </small>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <div class="mt-auto">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-primary h5 mb-0">{{ product.price }} ₽</strong>
+                        <a href="{% url 'catalog:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i>Подробнее
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Пагинация -->
+{% if is_paginated %}
+<nav aria-label="Навигация по страницам" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if show_unpublished %}&show_unpublished=true{% endif %}" aria-label="Первая">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if show_unpublished %}&show_unpublished=true{% endif %}" aria-label="Предыдущая">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+            </li>
         {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if show_unpublished %}&show_unpublished=true{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if show_unpublished %}&show_unpublished=true{% endif %}" aria-label="Следующая">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if show_unpublished %}&show_unpublished=true{% endif %}" aria-label="Последняя">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+            </li>
+        {% endif %}
+    </ul>
+
+    <!-- Информация о пагинации -->
+    <div class="text-center text-muted mt-2">
+        <small>
+            Показано {{ products|length }} из {{ page_obj.paginator.count }} товаров
+            (страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }})
+        </small>
+    </div>
+</nav>
+{% endif %}
+
+{% else %}
+<!-- Сообщение когда товаров нет -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-box-seam" style="font-size: 4rem; color: #6c757d;"></i>
+                <h3 class="mt-3 mb-3">
+                    {% if show_unpublished %}
+                        {% if can_view_unpublished %}
+                            Неопубликованных товаров не найдено
+                        {% else %}
+                            У вас нет неопубликованных товаров
+                        {% endif %}
+                    {% else %}
+                        Товары не найдены
+                    {% endif %}
+                </h3>
+                <p class="text-muted mb-4">
+                    {% if show_unpublished %}
+                        {% if can_view_unpublished %}
+                            Все товары опубликованы или отсутствуют в каталоге.
+                        {% else %}
+                            Все ваши товары опубликованы или у вас пока нет товаров.
+                        {% endif %}
+                    {% else %}
+                        В каталоге пока нет товаров для отображения.
+                    {% endif %}
+                </p>
+
+                {% if user.is_authenticated %}
+                    {% if not show_unpublished %}
+                    <a href="{% url 'catalog:add_product' %}" class="btn btn-primary me-2">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        Добавить первый товар
+                    </a>
+                    {% endif %}
+
+                    {% if show_unpublished and can_view_own_unpublished %}
+                    <a href="{% url 'catalog:index' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Посмотреть опубликованные товары
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Плавная прокрутка к началу страницы при переходе между страницами
-document.addEventListener('DOMContentLoaded', function() {
-    // Если в URL есть параметр page, прокручиваем к началу каталога
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('page')) {
-        document.querySelector('.pricing-header').scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
+function toggleUnpublished(userType) {
+    const currentUrl = new URL(window.location);
+    const switchId = userType === 'moderator' ? 'moderatorUnpublishedSwitch' : 'userUnpublishedSwitch';
+    const switchElement = document.getElementById(switchId);
+    const isChecked = switchElement.checked;
+
+    // Показываем индикатор загрузки
+    switchElement.disabled = true;
+
+    if (isChecked) {
+        currentUrl.searchParams.set('show_unpublished', 'true');
+    } else {
+        currentUrl.searchParams.delete('show_unpublished');
     }
+
+    // Сбрасываем пагинацию при изменении фильтра
+    currentUrl.searchParams.delete('page');
+
+    // Перенаправляем на новый URL
+    window.location.href = currentUrl.toString();
+}
+
+// Показываем подсказку при наведении на переключатель
+document.addEventListener('DOMContentLoaded', function() {
+    const switches = document.querySelectorAll('.form-check-input');
+    switches.forEach(function(switchEl) {
+        switchEl.addEventListener('mouseenter', function() {
+            if (this.id === 'moderatorUnpublishedSwitch') {
+                this.title = 'Показать все товары со статусом "На модерации", "Отклонен" и "Снят с публикации"';
+            } else if (this.id === 'userUnpublishedSwitch') {
+                this.title = 'Показать только ваши товары, которые не опубликованы';
+            }
+        });
+    });
+});
+
+// Подсветка карточек товаров при наведении
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(function(card) {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'transform 0.2s ease-in-out';
+        });
+
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
 });
 </script>
 {% endblock %}

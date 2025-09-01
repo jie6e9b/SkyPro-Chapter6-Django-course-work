@@ -10,35 +10,72 @@
             <div class="card-header">
                 <h3 class="mb-0">
                     {% if is_edit %}
-                        <i class="bi bi-pencil-square me-2"></i>Редактировать товар
+                        <i class="bi bi-pencil-square me-2"></i>{{ form_title }}
                     {% else %}
-                        <i class="bi bi-plus-circle me-2"></i>Добавить новый товар
+                        <i class="bi bi-plus-circle me-2"></i>{{ form_title }}
                     {% endif %}
                 </h3>
             </div>
             <div class="card-body">
+                
+                <!-- Отображение общих ошибок формы -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Общие ошибки:</h6>
+                        {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Отладочная информация (можно убрать в продакшене) -->
+                {% if form.errors %}
+                    <div class="alert alert-warning" role="alert">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Найдены ошибки в следующих полях:</h6>
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                <li><strong>{{ field }}:</strong> 
+                                    {% for error in errors %}
+                                        {{ error }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
                     <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label">Название товара</label>
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {{ form.name.label }} <span class="text-danger">*</span>
+                        </label>
                         {{ form.name }}
+                        {% if form.name.help_text %}
+                            <div class="form-text">{{ form.name.help_text }}</div>
+                        {% endif %}
                         {% if form.name.errors %}
                             <div class="text-danger mt-1">
                                 {% for error in form.name.errors %}
-                                    <small>{{ error }}</small>
+                                    <small><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
 
                     <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">Описание</label>
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
                         {{ form.description }}
+                        {% if form.description.help_text %}
+                            <div class="form-text">{{ form.description.help_text }}</div>
+                        {% endif %}
                         {% if form.description.errors %}
                             <div class="text-danger mt-1">
                                 {% for error in form.description.errors %}
-                                    <small>{{ error }}</small>
+                                    <small><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
@@ -47,12 +84,17 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="{{ form.price.id_for_label }}" class="form-label">Цена (₽)</label>
+                                <label for="{{ form.price.id_for_label }}" class="form-label">
+                                    {{ form.price.label }} <span class="text-danger">*</span>
+                                </label>
                                 {{ form.price }}
+                                {% if form.price.help_text %}
+                                    <div class="form-text">{{ form.price.help_text }}</div>
+                                {% endif %}
                                 {% if form.price.errors %}
                                     <div class="text-danger mt-1">
                                         {% for error in form.price.errors %}
-                                            <small>{{ error }}</small>
+                                            <small><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</small><br>
                                         {% endfor %}
                                     </div>
                                 {% endif %}
@@ -60,12 +102,17 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="{{ form.category.id_for_label }}" class="form-label">Категория</label>
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    {{ form.category.label }} <span class="text-danger">*</span>
+                                </label>
                                 {{ form.category }}
+                                {% if form.category.help_text %}
+                                    <div class="form-text">{{ form.category.help_text }}</div>
+                                {% endif %}
                                 {% if form.category.errors %}
                                     <div class="text-danger mt-1">
                                         {% for error in form.category.errors %}
-                                            <small>{{ error }}</small>
+                                            <small><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</small><br>
                                         {% endfor %}
                                     </div>
                                 {% endif %}
@@ -73,8 +120,10 @@
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label for="{{ form.image.id_for_label }}" class="form-label">Изображение</label>
+                    <div class="mb-3">
+                        <label for="{{ form.image.id_for_label }}" class="form-label">
+                            {{ form.image.label }}
+                        </label>
                         {% if is_edit and form.instance.image %}
                             <div class="mb-2">
                                 <img src="{{ form.instance.image.url }}" alt="Current image" class="img-thumbnail" style="max-height: 200px;">
@@ -82,10 +131,31 @@
                             </div>
                         {% endif %}
                         {{ form.image }}
+                        {% if form.image.help_text %}
+                            <div class="form-text">{{ form.image.help_text }}</div>
+                        {% endif %}
                         {% if form.image.errors %}
                             <div class="text-danger mt-1">
                                 {% for error in form.image.errors %}
-                                    <small>{{ error }}</small>
+                                    <small><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Добавленное поле статуса публикации -->
+                    <div class="mb-4">
+                        <label for="{{ form.publish.id_for_label }}" class="form-label">
+                            {{ form.publish.label }}
+                        </label>
+                        {{ form.publish }}
+                        {% if form.publish.help_text %}
+                            <div class="form-text">{{ form.publish.help_text }}</div>
+                        {% endif %}
+                        {% if form.publish.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.publish.errors %}
+                                    <small><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
@@ -109,4 +179,89 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Предпросмотр изображения
+    const imageInput = document.getElementById('{{ form.image.id_for_label }}');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Проверка размера файла
+                const maxSize = 5 * 1024 * 1024; // 5 МБ
+                if (file.size > maxSize) {
+                    alert('Файл слишком большой! Максимальный размер: 5 МБ');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Проверка типа файла
+                const allowedTypes = ['image/jpeg', 'image/png'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Неподдерживаемый тип файла! Разрешены только JPEG и PNG');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Предпросмотр
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Удаляем старый предпросмотр
+                    const oldPreview = document.getElementById('imagePreview');
+                    if (oldPreview) {
+                        oldPreview.remove();
+                    }
+                    
+                    // Создаем новый предпросмотр
+                    const preview = document.createElement('div');
+                    preview.id = 'imagePreview';
+                    preview.className = 'mt-2';
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview" class="img-thumbnail" style="max-height: 200px;">
+                        <p class="small text-muted mt-1">Предпросмотр нового изображения</p>
+                    `;
+                    imageInput.parentNode.insertBefore(preview, imageInput.nextSibling);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Валидация формы перед отправкой
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const nameInput = document.getElementById('{{ form.name.id_for_label }}');
+        const priceInput = document.getElementById('{{ form.price.id_for_label }}');
+        const categoryInput = document.getElementById('{{ form.category.id_for_label }}');
+        
+        let hasErrors = false;
+        
+        // Проверка обязательных полей
+        if (!nameInput.value.trim()) {
+            alert('Название товара обязательно для заполнения!');
+            nameInput.focus();
+            hasErrors = true;
+        }
+        
+        if (!priceInput.value || parseFloat(priceInput.value) < 0) {
+            alert('Укажите корректную цену товара!');
+            priceInput.focus();
+            hasErrors = true;
+        }
+        
+        if (!categoryInput.value) {
+            alert('Выберите категорию товара!');
+            categoryInput.focus();
+            hasErrors = true;
+        }
+        
+        if (hasErrors) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
 {% endblock %}

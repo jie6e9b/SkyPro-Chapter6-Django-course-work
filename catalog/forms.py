@@ -4,6 +4,7 @@ from django.core.files.images import get_image_dimensions
 from .models import Product
 import os
 
+
 # Константы с запрещенными словами
 FORBIDDEN_WORDS = [
     'казино', 'криптовалюта', 'радар', 'rolex', 'viagra', 'bitcoin',
@@ -85,12 +86,14 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'category', 'image']
+        # Исключаем поле owner из формы - оно будет заполняться автоматически
+        fields = ['name', 'description', 'price', 'category', 'image']  # Убрали publish из обязательных полей
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Введите название продукта',
-                'maxlength': 200
+                'maxlength': 200,
+                'required': True
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -102,15 +105,17 @@ class ProductForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '0.00',
                 'min': '0',
-                'step': '0.01'
+                'step': '0.01',
+                'required': True
             }),
             'category': forms.Select(attrs={
-                'class': 'form-select'
+                'class': 'form-select',
+                'required': True
             }),
             'image': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/jpeg,image/png',  # Ограничиваем типы файлов
-                'capture': 'environment'  # Для мобильных устройств
+                'accept': 'image/jpeg,image/png',
+                'capture': 'environment'
             })
         }
         labels = {
@@ -121,40 +126,76 @@ class ProductForm(forms.ModelForm):
             'image': 'Изображение'
         }
         help_texts = {
-            'name': 'Максимум 200 символов',
+            'name': 'Максимум 200 символов. Обязательное поле.',
             'description': 'Подробное описание продукта',
-            'price': 'Укажите цену в рублях',
+            'price': 'Укажите цену в рублях. Обязательное поле.',
+            'category': 'Выберите категорию товара. Обязательное поле.',
             'image': 'Поддерживаются форматы: JPEG, PNG. Максимальный размер: 5 МБ'
         }
 
     def __init__(self, *args, **kwargs):
+        # Извлекаем информацию о пользователе из kwargs
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
         # Добавляем валидатор для поля изображения
         self.fields['image'].validators.append(validate_image_file)
 
+        # Делаем обязательные поля явно обязательными
+        self.fields['name'].required = True
+        self.fields['price'].required = True
+        self.fields['category'].required = True
+
+        # Добавляем поле publish только для аутентифицированных модераторов
+        if (self.user and
+                hasattr(self.user, 'is_authenticated') and
+                self.user.is_authenticated and
+                self.user.has_perm('catalog.can_unpublish_product') and
+                hasattr(Product, 'PUBLISH_CHOICES')):
+
+            # Определяем начальное значение
+            initial_value = 'pending'
+            if self.instance and self.instance.pk and hasattr(self.instance, 'publish'):
+                initial_value = self.instance.publish
+
+            self.fields['publish'] = forms.ChoiceField(
+                choices=Product.PUBLISH_CHOICES,
+                initial=initial_value,
+                widget=forms.Select(attrs={'class': 'form-select'}),
+                label='Статус публикации',
+                help_text='Выберите статус публикации товара',
+                required=True
+            )
+
     def clean_name(self):
         """Валидация названия продукта на запрещенные слова"""
-        name = self.cleaned_data['name'].lower()
+        name = self.cleaned_data.get('name', '')
+        if not name:
+            raise ValidationError('Название продукта обязательно для заполнения')
+
+        name_lower = name.lower()
 
         for word in FORBIDDEN_WORDS:
-            if word in name:
+            if word in name_lower:
                 raise ValidationError(
                     f'Название продукта не может содержать запрещенное слово: "{word}"'
                 )
 
-        return self.cleaned_data['name']
+        return name
 
     def clean_description(self):
         """Валидация описания продукта на запрещенные слова"""
-        description = self.cleaned_data['description'].lower()
+        description = self.cleaned_data.get('description', '')
+        if description:  # Описание не обязательное
+            description_lower = description.lower()
 
-        for word in FORBIDDEN_WORDS:
-            if word in description:
-                raise ValidationError(
-                    f'Описание продукта не может содержать запрещенное слово: "{word}"'
-                )
+            for word in FORBIDDEN_WORDS:
+                if word in description_lower:
+                    raise ValidationError(
+                        f'Описание продукта не может содержать запрещенное слово: "{word}"'
+                    )
 
-        return self.cleaned_data['description']
+        return description
 
     def clean_image(self):
         """Дополнительная валидация изображения"""
@@ -169,7 +210,7 @@ class ProductForm(forms.ModelForm):
 
     def clean_price(self):
         """Валидация цены продукта"""
-        price = self.cleaned_data['price']
+        price = self.cleaned_data.get('price')
 
         if price is None:
             raise ValidationError('Цена обязательна для заполнения')
@@ -186,3 +227,14 @@ class ProductForm(forms.ModelForm):
 
         return price
 
+    def save(self, commit=True):
+        """Переопределяем сохранение для установки статуса по умолчанию"""
+        instance = super().save(commit=False)
+
+        # Если поле publish не было установлено (обычный пользователь), устанавливаем 'pending'
+        if not hasattr(instance, 'publish') or not instance.publish:
+            instance.publish = 'pending'
+
+        if commit:
+            instance.save()
+        return instance

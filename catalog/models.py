@@ -1,4 +1,7 @@
+from django.conf import settings
 from django.db import models
+
+import users.admin
 
 
 class Category(models.Model):
@@ -25,7 +28,8 @@ class Product(models.Model):
     """ Модель товара в каталоге.
     Представляет товар с его основными характеристиками: название, описание,
     изображение, цена и привязка к категории. Автоматически отслеживает
-    время создания и последнего обновления.
+    время создания и последнего обновления. Поддерживает систему модерации
+    публикации товаров и привязку к пользователю-владельцу.
     
     Attributes:
         name (str): Название товара (максимум 100 символов).
@@ -34,7 +38,21 @@ class Product(models.Model):
         price (Decimal): Цена товара с точностью до 2 знаков после запятой.
         created_at (DateTime): Дата и время создания записи (автоматически).
         updated_at (DateTime): Дата и время последнего обновления (автоматически).
-        category (ForeignKey): Связь с категорией товара."""
+        publish (str): Статус публикации товара. Возможные значения:
+            - 'pending': На модерации
+            - 'published': Опубликован
+            - 'rejected': Отказано в публикации
+            - 'unpublished': Снят с публикации
+        category (ForeignKey): Связь с категорией товара.
+        owner (ForeignKey): Владелец продукта - пользователь, создавший товар.
+            Автоматически заполняется при создании товара."""
+
+    PUBLISH_CHOICES = [
+        ('pending', 'На модерации'),
+        ('published', 'Опубликован'),
+        ('rejected', 'Отказано в публикации'),
+        ('unpublished', 'Снят с публикации'),
+    ]
     
     name = models.CharField(max_length=100, verbose_name="Наименование")
     description = models.TextField(verbose_name="Описание", blank=True, null=True)
@@ -42,8 +60,18 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
-
+    publish = models.CharField(
+        max_length=100,
+        choices=PUBLISH_CHOICES,
+        default='pending',
+        verbose_name='Статус публикации')
     category = models.ForeignKey(Category, on_delete=models.CASCADE, verbose_name="Категория")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name="Владелец продукта",
+        related_name="products"
+    )
 
     def __str__(self):
         """ Возвращает строковое представление категории.
@@ -53,7 +81,9 @@ class Product(models.Model):
     class Meta:
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'
-
+        permissions = [
+            ('can_unpublish_product', 'Can unpublish product')
+        ]
 
 class ContactInfo(models.Model):
     """Модель для хранения контактной информации компании.
