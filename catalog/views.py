@@ -11,7 +11,10 @@ from django.views.decorators.http import require_POST
 from .models import Product, ContactInfo, Category
 from .forms import ProductForm
 import re
-
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
+from django.core.cache import cache
+from catalog.services import CategoryService
 
 class OwnerOrModeratorRequiredMixin(UserPassesTestMixin):
     """
@@ -67,7 +70,7 @@ class OwnerRequiredMixin(UserPassesTestMixin):
 
 
 class IndexView(ListView):
-    """Class-based view для отображения домашней страницы каталога с пагинацией"""
+    """Главная страница каталога с пагинацией и фильтром неопубликованных товаров"""
 
     model = Product
     template_name = 'catalog/home.html'
@@ -76,57 +79,59 @@ class IndexView(ListView):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        queryset = Product.objects.select_related('category')
-
-        # Проверяем фильтр для неопубликованных товаров
+        user = self.request.user
         show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
 
-        if show_unpublished:
-            if self.request.user.is_authenticated:
-                if self.request.user.has_perm('catalog.can_unpublish_product'):
-                    # Модераторы видят все неопубликованные товары
-                    queryset = queryset.exclude(publish='published')
-                else:
-                    # Обычные пользователи видят только свои неопубликованные товары
-                    queryset = queryset.filter(
-                        owner=self.request.user
-                    ).exclude(publish='published')
-            else:
-                # Неаутентифицированные пользователи - показываем только опубликованные
-                queryset = queryset.filter(publish='published')
-        else:
-            # Показываем только опубликованные товары
-            queryset = queryset.filter(publish='published')
+        # Уникальный ключ кэша учитывает пользователя и фильтр
+        cache_key = f"index_queryset_{user.id if user.is_authenticated else 'anon'}_{show_unpublished}"
+        queryset = cache.get(cache_key)
 
-        return queryset.order_by('-created_at')
+        if not queryset:
+            queryset = Product.objects.select_related('category')
+
+            if show_unpublished:
+                if user.is_authenticated:
+                    if user.has_perm('catalog.can_unpublish_product'):
+                        # Модератор видит все неопубликованные товары
+                        queryset = queryset.filter(publish__in=['pending','rejected','unpublished'])
+                    else:
+                        # Обычные пользователи видят свои неопубликованные + опубликованные
+                        queryset = queryset.filter(publish='published') | queryset.filter(owner=user).exclude(publish='published')
+                else:
+                    # Гости видят только опубликованные
+                    queryset = queryset.filter(publish='published')
+            else:
+                # Фильтр выключен — показываем только опубликованные
+                queryset = queryset.filter(publish='published')
+
+            queryset = queryset.order_by('-created_at')
+            cache.set(cache_key, queryset, 60 * 15)
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
+
         context.update({
             'title': 'Главная страница - Skystore',
             'description': 'Добро пожаловать в наш каталог товаров!',
+            'show_unpublished': show_unpublished,
+            'can_view_unpublished': user.has_perm('catalog.can_unpublish_product'),
+            'can_view_own_unpublished': user.is_authenticated,
         })
 
-        # Добавляем информацию о фильтре в контекст
-        show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
-        context['show_unpublished'] = show_unpublished
-        context['can_view_unpublished'] = self.request.user.has_perm('catalog.can_unpublish_product')
-
-        # Добавляем информацию о возможности видеть свои неопубликованные товары
-        context['can_view_own_unpublished'] = self.request.user.is_authenticated
-
-        # Считаем количество неопубликованных товаров пользователя
-        if self.request.user.is_authenticated:
-            user_unpublished_count = Product.objects.filter(
-                owner=self.request.user
-            ).exclude(publish='published').count()
-            context['user_unpublished_count'] = user_unpublished_count
+        # Количество неопубликованных товаров для текущего пользователя
+        if user.is_authenticated:
+            context['user_unpublished_count'] = Product.objects.filter(owner=user).exclude(publish='published').count()
         else:
             context['user_unpublished_count'] = 0
 
         return context
 
 
+@method_decorator(cache_page(60 * 15), name='dispatch')
 class ProductDetailView(DetailView):
     """Class-based view для отображения детальной информации о товаре"""
 
@@ -378,3 +383,55 @@ class ContactsView(TemplateView):
             return redirect('catalog:contacts')
 
         return self.get(request, *args, **kwargs)
+
+
+@method_decorator(cache_page(60 * 5), name='dispatch')  # кэшируем на 5 минут
+class CategoryProductsView(ListView):
+    template_name = "catalog/category_products.html"
+    context_object_name = "products"
+    paginate_by = 12
+
+    def get_queryset(self):
+        category_id = self.kwargs['category_id']
+        user = self.request.user
+        show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
+
+        # Уникальный ключ кэша для пользователя, категории и фильтра
+        cache_key = f"category_{category_id}_products_{user.id if user.is_authenticated else 'anon'}_{show_unpublished}"
+        queryset = cache.get(cache_key)
+
+        if not queryset:
+            queryset = Product.objects.filter(category_id=category_id).select_related('category')
+
+            if show_unpublished:
+                if user.is_authenticated:
+                    if user.has_perm('catalog.can_unpublish_product'):
+                        # Модератор видит все неопубликованные товары
+                        queryset = queryset.filter(publish__in=['pending','rejected','unpublished'])
+                    else:
+                        # Обычные пользователи видят свои неопубликованные + опубликованные
+                        queryset = queryset.filter(publish='published') | queryset.filter(owner=user).exclude(publish='published')
+                else:
+                    # Гости видят только опубликованные
+                    queryset = queryset.filter(publish='published')
+            else:
+                # Фильтр выключен — показываем только опубликованные
+                queryset = queryset.filter(publish='published')
+
+            queryset = queryset.order_by('-created_at')
+            cache.set(cache_key, queryset, 60 * 5)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_id = self.kwargs['category_id']
+        category = Category.objects.get(id=category_id)
+        context['category'] = category
+
+        user = self.request.user
+        show_unpublished = self.request.GET.get('show_unpublished', 'false').lower() == 'true'
+        context['show_unpublished'] = show_unpublished
+        context['can_view_unpublished'] = user.has_perm('catalog.can_unpublish_product')
+
+        return context

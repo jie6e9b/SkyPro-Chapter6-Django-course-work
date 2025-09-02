@@ -11,4 +11,5 @@ urlpatterns = [
     path('product/<int:product_id>/edit/', views.EditProductView.as_view(), name='edit_product'),
     path('product/<int:product_id>/delete/', views.DeleteProductView.as_view(), name='delete_product'),
     path('product/<int:product_id>/toggle-status/', views.toggle_product_status, name='toggle_product_status'),
+    path("category/<int:category_id>/products/", views.CategoryProductsView.as_view(), name="category_products"),
 ]
