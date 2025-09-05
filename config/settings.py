@@ -155,7 +155,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 
-# # Email настройки
+# Email настройки
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
@@ -164,4 +164,13 @@ EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'  # ← Д�
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+
+# Настройки кэширования Redis
+CACHES = {
+    'default': {
+    'BACKEND' : 'django.core.cache.backends.redis.RedisCache',
+    'LOCATION': 'redis://localhost:6379/1'
+    }
+}
 
